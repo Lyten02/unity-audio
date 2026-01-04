@@ -1,0 +1,18 @@
+{
+  "name": "com.game.audio",
+  "displayName": "Audio Module",
+  "version": "1.0.0",
+  "unity": "6000.0",
+  "description": "Audio system with ESB integration, software mixing, localization support, and WebGL optimization",
+  "keywords": [
+    "audio",
+    "sfx",
+    "music",
+    "dialogue",
+    "esb"
+  ],
+  "author": {
+    "name": "Konstantin"
+  },
+  "dependencies": {}
+}

@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbfd6401f05f4f1d9f4e2f629fb909a, type: 3}
+  m_Name: AudioConfig
+  m_EditorClassIdentifier: Audio::Audio.AudioConfig
+  _database: {fileID: 11400000, guid: e13711cf64ec74f4587e1ac7fa338cab, type: 2}
+  _sfxPoolSize: 16
+  _musicSources: 2
+  _dialogueSources: 2
+  _webglPoolSize: 8
+  _pauseOnFocusLost: 1
+  _duckingEnabled: 1
+  _duckingAmount: 0.3
+  _defaultMusicFadeDuration: 1
+  _debugLogs: 1
