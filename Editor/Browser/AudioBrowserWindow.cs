@@ -143,8 +143,8 @@ namespace Audio.Editor
                 var style = isSelected ? "SelectionRect" : "Label";
                 var rect = EditorGUILayout.BeginHorizontal(style, GUILayout.Height(22));
 
-                // Icon
-                var icon = entry.IsLocalized ? "d_LocalizationAsset Icon" : "d_AudioSource Icon";
+                // Icon (d_Favorite for localized, d_AudioSource for regular)
+                var icon = entry.IsLocalized ? "d_Favorite Icon" : "d_AudioSource Icon";
                 GUILayout.Label(EditorGUIUtility.IconContent(icon), GUILayout.Width(20), GUILayout.Height(20));
 
                 // Name
@@ -196,7 +196,58 @@ namespace Audio.Editor
 
             // Preview
             EditorGUILayout.LabelField("Preview", EditorStyles.boldLabel);
-            if (entry.DirectClip != null)
+
+            // Localized audio: show inline Play buttons for each language
+            if (entry.IsLocalized && entry.LanguageClips != null && entry.LanguageClips.Count > 0)
+            {
+                EditorGUILayout.BeginHorizontal();
+
+                foreach (var langCode in entry.Languages)
+                {
+                    if (entry.LanguageClips.TryGetValue(langCode, out var clip) && clip != null)
+                    {
+                        if (GUILayout.Button($"▶ {langCode.ToUpper()}", GUILayout.Width(60)))
+                        {
+                            _previewPlayer.PlayClip(clip);
+                        }
+                    }
+                    else
+                    {
+                        EditorGUI.BeginDisabledGroup(true);
+                        GUILayout.Button($"✗ {langCode.ToUpper()}", GUILayout.Width(60));
+                        EditorGUI.EndDisabledGroup();
+                    }
+                }
+
+                // Stop button
+                if (_previewPlayer.IsPlaying)
+                {
+                    if (GUILayout.Button("■", GUILayout.Width(30)))
+                    {
+                        _previewPlayer.StopPreview();
+                    }
+                }
+
+                GUILayout.FlexibleSpace();
+                EditorGUILayout.EndHorizontal();
+
+                // Volume and progress
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.LabelField("Vol:", GUILayout.Width(30));
+                _previewPlayer.PreviewVolume = EditorGUILayout.Slider(_previewPlayer.PreviewVolume, 0f, 1f, GUILayout.Width(100));
+                EditorGUILayout.LabelField(_previewPlayer.GetPlaybackTimeString(), GUILayout.Width(80));
+                EditorGUILayout.EndHorizontal();
+
+                // Progress bar
+                if (_previewPlayer.IsPlaying)
+                {
+                    var rect = GUILayoutUtility.GetRect(GUIContent.none, GUIStyle.none, GUILayout.Height(4));
+                    EditorGUI.ProgressBar(rect, _previewPlayer.GetPlaybackProgress(), "");
+                    Repaint(); // Keep updating while playing
+                }
+            }
+            // Regular audio: single Play button
+            else if (entry.DirectClip != null)
             {
                 _previewPlayer.DrawPreviewControls(entry.DirectClip);
 
@@ -218,18 +269,6 @@ namespace Audio.Editor
             {
                 EditorGUILayout.LabelField("Addressables", EditorStyles.boldLabel);
                 EditorGUILayout.LabelField("Key:", entry.AddressableKey);
-            }
-
-            // Localized variants
-            if (entry.IsLocalized && entry.Languages != null)
-            {
-                EditorGUILayout.Space(10);
-                EditorGUILayout.LabelField("Localized Variants", EditorStyles.boldLabel);
-
-                foreach (var lang in entry.Languages)
-                {
-                    EditorGUILayout.LabelField($"  {lang}");
-                }
             }
 
             EditorGUILayout.EndScrollView();
@@ -305,13 +344,20 @@ namespace Audio.Editor
 
                     AudioClip firstClip = null;
                     var languages = new List<string>();
+                    var languageClips = new Dictionary<string, AudioClip>();
 
                     foreach (var variant in entry.Variants)
                     {
-                        languages.Add(variant.Language.ToCode());
-                        if (firstClip == null && variant.DirectClip != null)
+                        var langCode = variant.Language.ToCode();
+                        languages.Add(langCode);
+
+                        if (variant.DirectClip != null)
                         {
-                            firstClip = variant.DirectClip;
+                            languageClips[langCode] = variant.DirectClip;
+                            if (firstClip == null)
+                            {
+                                firstClip = variant.DirectClip;
+                            }
                         }
                     }
 
@@ -323,7 +369,8 @@ namespace Audio.Editor
                         Category = entry.Category,
                         DirectClip = firstClip,
                         IsLocalized = true,
-                        Languages = languages.ToArray()
+                        Languages = languages.ToArray(),
+                        LanguageClips = languageClips
                     });
                 }
             }
@@ -385,6 +432,7 @@ namespace Audio.Editor
             public string AddressableKey;
             public bool IsLocalized;
             public string[] Languages;
+            public Dictionary<string, AudioClip> LanguageClips;
         }
     }
 }

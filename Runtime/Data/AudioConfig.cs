@@ -37,7 +37,9 @@ namespace Audio
         [Tooltip("Smaller pool size for WebGL due to memory constraints")]
         [Range(4, 16)]
         [SerializeField]
+#pragma warning disable CS0414 // Used in conditional compilation (UNITY_WEBGL)
         private int _webglPoolSize = 8;
+#pragma warning restore CS0414
 
         [Tooltip("Pause all audio when browser tab loses focus")]
         [SerializeField]
