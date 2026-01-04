@@ -157,17 +157,17 @@ namespace Audio
         {
             foreach (var source in _musicSources)
             {
-                source.Stop();
+                if (source != null) source.Stop();
             }
 
             foreach (var source in _dialogueSources)
             {
-                source.Stop();
+                if (source != null) source.Stop();
             }
 
             foreach (var source in _activeSfx)
             {
-                source.Stop();
+                if (source != null) source.Stop();
             }
         }
 
@@ -178,7 +178,7 @@ namespace Audio
             // Pause music
             foreach (var source in _musicSources)
             {
-                if (source.isPlaying)
+                if (source != null && source.isPlaying)
                 {
                     _pausedSources.Add(new PausedSource { Source = source, Time = source.time });
                     source.Pause();
@@ -188,7 +188,7 @@ namespace Audio
             // Pause dialogue
             foreach (var source in _dialogueSources)
             {
-                if (source.isPlaying)
+                if (source != null && source.isPlaying)
                 {
                     _pausedSources.Add(new PausedSource { Source = source, Time = source.time });
                     source.Pause();
@@ -198,7 +198,7 @@ namespace Audio
             // Pause SFX
             foreach (var source in _activeSfx)
             {
-                if (source.isPlaying)
+                if (source != null && source.isPlaying)
                 {
                     _pausedSources.Add(new PausedSource { Source = source, Time = source.time });
                     source.Pause();
