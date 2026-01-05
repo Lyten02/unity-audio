@@ -67,7 +67,13 @@ namespace Audio
         [SerializeField]
         private bool _debugLogs = true;
 
+        [Tooltip("Output path for generated AudioKeys.cs")]
+        [FolderPath]
+        [SerializeField]
+        private string _generatedKeysPath = "Assets/Scripts/Generated";
+
         public bool DebugLogs => _debugLogs;
+        public string GeneratedKeysPath => _generatedKeysPath;
 #endif
 
         // Properties

@@ -15,7 +15,8 @@ namespace Audio.Editor
     /// </summary>
     public static class AudioKeysGenerator
     {
-        private const string OUTPUT_PATH = "Assets/Modules/Audio/Runtime/Generated/AudioKeys.cs";
+        private const string DEFAULT_OUTPUT_PATH = "Assets/Scripts/Generated";
+        private const string OUTPUT_FILENAME = "AudioKeys.cs";
 
         [MenuItem("Tools/Audio/Generate AudioKeys", priority = 2)]
         public static void Generate()
@@ -27,7 +28,19 @@ namespace Audio.Editor
                 return;
             }
 
-            GenerateFromDatabase(database);
+            var config = FindConfig();
+            string outputPath = GetOutputPath(config);
+
+            GenerateFromDatabase(database, outputPath);
+        }
+
+        private static string GetOutputPath(AudioConfig config)
+        {
+            string folder = config != null && !string.IsNullOrEmpty(config.GeneratedKeysPath)
+                ? config.GeneratedKeysPath
+                : DEFAULT_OUTPUT_PATH;
+
+            return Path.Combine(folder, OUTPUT_FILENAME);
         }
 
         [MenuItem("Tools/Audio/Open Database", priority = 10)]
@@ -62,8 +75,9 @@ namespace Audio.Editor
             }
         }
 
-        public static void GenerateFromDatabase(AudioClipDatabase database)
+        public static void GenerateFromDatabase(AudioClipDatabase database, string outputPath = null)
         {
+            outputPath ??= Path.Combine(DEFAULT_OUTPUT_PATH, OUTPUT_FILENAME);
             var entries = new List<(string name, int id)>();
             var usedIds = new HashSet<int>();
             bool databaseModified = false;
@@ -137,17 +151,17 @@ namespace Audio.Editor
             string content = GenerateContent(entries);
 
             // Ensure directory exists
-            string directory = Path.GetDirectoryName(OUTPUT_PATH);
+            string directory = Path.GetDirectoryName(outputPath);
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
             {
                 Directory.CreateDirectory(directory);
             }
 
             // Write file
-            File.WriteAllText(OUTPUT_PATH, content);
+            File.WriteAllText(outputPath, content);
             AssetDatabase.Refresh();
 
-            Debug.Log($"[AudioKeysGenerator] Generated {entries.Count} keys to {OUTPUT_PATH}");
+            Debug.Log($"[AudioKeysGenerator] Generated {entries.Count} keys to {outputPath}");
         }
 
         private static string GenerateContent(List<(string name, int id)> entries)
@@ -245,6 +259,17 @@ namespace Audio.Editor
             {
                 var path = AssetDatabase.GUIDToAssetPath(guids[0]);
                 return AssetDatabase.LoadAssetAtPath<AudioClipDatabase>(path);
+            }
+            return null;
+        }
+
+        private static AudioConfig FindConfig()
+        {
+            var guids = AssetDatabase.FindAssets("t:AudioConfig");
+            if (guids.Length > 0)
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guids[0]);
+                return AssetDatabase.LoadAssetAtPath<AudioConfig>(path);
             }
             return null;
         }
