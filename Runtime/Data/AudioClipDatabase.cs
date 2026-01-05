@@ -24,13 +24,20 @@ namespace Audio
         [SerializeField]
         private List<LocalizedAudioClipEntry> _localizedEntries = new();
 
+        [Title("Audio Groups")]
+        [ListDrawerSettings(ShowIndexLabels = true, ListElementLabelName = "_name")]
+        [SerializeField]
+        private List<AudioGroupEntry> _groups = new();
+
         // Runtime lookup caches
         private Dictionary<int, AudioClipEntry> _entryLookup;
         private Dictionary<int, LocalizedAudioClipEntry> _localizedLookup;
+        private Dictionary<int, AudioGroupEntry> _groupLookup;
         private bool _isInitialized;
 
         public IReadOnlyList<AudioClipEntry> Entries => _entries;
         public IReadOnlyList<LocalizedAudioClipEntry> LocalizedEntries => _localizedEntries;
+        public IReadOnlyList<AudioGroupEntry> Groups => _groups;
 
         /// <summary>
         /// Initialize lookup dictionaries for fast access.
@@ -42,6 +49,7 @@ namespace Audio
 
             _entryLookup = new Dictionary<int, AudioClipEntry>();
             _localizedLookup = new Dictionary<int, LocalizedAudioClipEntry>();
+            _groupLookup = new Dictionary<int, AudioGroupEntry>();
 
             foreach (var entry in _entries)
             {
@@ -59,13 +67,21 @@ namespace Audio
                 }
             }
 
+            foreach (var group in _groups)
+            {
+                if (group != null && !_groupLookup.ContainsKey(group.Id))
+                {
+                    _groupLookup[group.Id] = group;
+                }
+            }
+
             _isInitialized = true;
         }
 
         private void EnsureInitialized()
         {
             // Check both flag and actual dictionary - dictionaries can become null after domain reload
-            if (!_isInitialized || _entryLookup == null || _localizedLookup == null)
+            if (!_isInitialized || _entryLookup == null || _localizedLookup == null || _groupLookup == null)
             {
                 _isInitialized = false; // Reset to ensure full reinitialization
                 Initialize();
@@ -124,6 +140,33 @@ namespace Audio
         {
             EnsureInitialized();
             return _localizedLookup.ContainsKey(id);
+        }
+
+        /// <summary>
+        /// Try to get audio group by ID.
+        /// </summary>
+        public bool TryGetGroup(int id, out AudioGroupEntry group)
+        {
+            EnsureInitialized();
+            return _groupLookup.TryGetValue(id, out group);
+        }
+
+        /// <summary>
+        /// Get audio group by ID (returns null if not found).
+        /// </summary>
+        public AudioGroupEntry GetGroup(int id)
+        {
+            TryGetGroup(id, out var group);
+            return group;
+        }
+
+        /// <summary>
+        /// Check if ID is an audio group.
+        /// </summary>
+        public bool IsGroup(int id)
+        {
+            EnsureInitialized();
+            return _groupLookup.ContainsKey(id);
         }
 
         /// <summary>
@@ -189,6 +232,7 @@ namespace Audio
             _isInitialized = false;
             _entryLookup = null;
             _localizedLookup = null;
+            _groupLookup = null;
         }
 
         /// <summary>

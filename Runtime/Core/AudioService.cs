@@ -21,15 +21,23 @@ namespace Audio
 
         private readonly Dictionary<int, AudioChannel> _activeChannels = new();
         private readonly List<int> _channelsToRemove = new();
+        private readonly Dictionary<int, ShuffleState> _groupShuffleStates = new();
 
         private AudioChannel _currentMusicChannel;
+        private PlaylistController _currentPlaylist;
         private bool _isReady = true; // Will be set to false for WebGL until user interaction
         private bool _isPaused;
 
         public bool IsReady => _isReady;
 
+        public PlaylistHandle CurrentPlaylist => _currentPlaylist != null
+            ? new PlaylistHandle(_currentPlaylist.Id, 0, _currentPlaylist)
+            : PlaylistHandle.Invalid;
+
         public event Action<AudioHandle> OnSoundStarted;
         public event Action<AudioHandle> OnSoundStopped;
+        public event Action<int> OnPlaylistTrackChanged;
+        public event Action OnPlaylistEnded;
 
         public AudioService(
             AudioConfig config,
@@ -260,6 +268,169 @@ namespace Audio
             }
         }
 
+        // === Audio Groups ===
+
+        public AudioHandle PlayGroup(int groupKey)
+        {
+            return PlayGroup(groupKey, AudioPlaySettings.Default);
+        }
+
+        public AudioHandle PlayGroup(int groupKey, AudioPlaySettings settings)
+        {
+            if (!_database.TryGetGroup(groupKey, out var group))
+            {
+                Debug.LogWarning($"[Audio] Group not found: {groupKey}");
+                return AudioHandle.Invalid;
+            }
+
+            int clipId = SelectClipFromGroup(group);
+            if (clipId == -1)
+            {
+                Debug.LogWarning($"[Audio] Group has no clips: {group.Name}");
+                return AudioHandle.Invalid;
+            }
+
+            return Play(clipId, settings);
+        }
+
+        private int SelectClipFromGroup(AudioGroupEntry group)
+        {
+            if (group.Clips.Count == 0) return -1;
+
+            switch (group.PlaybackMode)
+            {
+                case PlaybackMode.Random:
+                    return SelectRandomWeighted(group);
+
+                case PlaybackMode.Shuffle:
+                    return SelectShuffle(group);
+
+                case PlaybackMode.Sequential:
+                    return SelectSequential(group);
+
+                default:
+                    return group.Clips[0].ClipId;
+            }
+        }
+
+        private int SelectRandomWeighted(AudioGroupEntry group)
+        {
+            float totalWeight = 0f;
+            foreach (var clip in group.Clips)
+            {
+                totalWeight += clip.Weight;
+            }
+
+            float random = UnityEngine.Random.Range(0f, totalWeight);
+            float cumulative = 0f;
+
+            foreach (var clip in group.Clips)
+            {
+                cumulative += clip.Weight;
+                if (random <= cumulative)
+                {
+                    return clip.ClipId;
+                }
+            }
+
+            return group.Clips[0].ClipId;
+        }
+
+        private int SelectShuffle(AudioGroupEntry group)
+        {
+            if (!_groupShuffleStates.TryGetValue(group.Id, out var state))
+            {
+                state = new ShuffleState(group.Clips.Count);
+                _groupShuffleStates[group.Id] = state;
+            }
+
+            int index = state.GetNextIndex();
+            if (index == -1)
+            {
+                state.Reset();
+                index = state.GetNextIndex();
+            }
+
+            return group.Clips[index].ClipId;
+        }
+
+        private int SelectSequential(AudioGroupEntry group)
+        {
+            // For SFX groups, sequential doesn't track state - just return first clip
+            // For playlists, PlaylistController handles sequential
+            return group.Clips[0].ClipId;
+        }
+
+        // === Playlists ===
+
+        public PlaylistHandle PlayPlaylist(int groupKey, float fadeDuration = 1f)
+        {
+            PlayPlaylistAsync(groupKey, fadeDuration).Forget();
+            return CurrentPlaylist;
+        }
+
+        public async UniTask<PlaylistHandle> PlayPlaylistAsync(int groupKey, float fadeDuration = 1f, CancellationToken cancellationToken = default)
+        {
+            if (!_database.TryGetGroup(groupKey, out var group))
+            {
+                Debug.LogWarning($"[Audio] Group not found: {groupKey}");
+                return PlaylistHandle.Invalid;
+            }
+
+            if (!group.IsMusicPlaylist)
+            {
+                Debug.LogWarning($"[Audio] Group is not a music playlist (requires Layer=Music and AutoPlayNext=true): {group.Name}");
+                return PlaylistHandle.Invalid;
+            }
+
+            // Stop current playlist
+            _currentPlaylist?.Dispose();
+
+            // Stop current music
+            if (_currentMusicChannel != null && _currentMusicChannel.IsPlaying)
+            {
+                await _currentMusicChannel.FadeOutAsync(fadeDuration);
+            }
+
+            // Create new controller
+            _currentPlaylist = new PlaylistController(
+                group,
+                _database,
+                _mixer,
+                _pool,
+                _directProvider,
+                _addressableProvider);
+
+            _currentPlaylist.OnTrackChanged += id => OnPlaylistTrackChanged?.Invoke(id);
+            _currentPlaylist.OnPlaylistEnded += () => OnPlaylistEnded?.Invoke();
+
+            await _currentPlaylist.StartAsync(fadeDuration, cancellationToken);
+
+            return new PlaylistHandle(_currentPlaylist.Id, group.Id, _currentPlaylist);
+        }
+
+        public void StopPlaylist(float fadeDuration = 1f)
+        {
+            _currentPlaylist?.Stop();
+            _currentPlaylist?.Dispose();
+            _currentPlaylist = null;
+        }
+
+        public void PausePlaylist()
+        {
+            _currentPlaylist?.Pause();
+        }
+
+        public void ResumePlaylist()
+        {
+            _currentPlaylist?.Resume();
+        }
+
+        public void SkipTrack()
+        {
+            _currentPlaylist?.Skip();
+        }
+
         // === Stop ===
 
         public void Stop(AudioHandle handle)
@@ -475,6 +646,9 @@ namespace Audio
         {
             _mixer.OnVolumeChanged -= OnMixerVolumeChanged;
             _mixer.OnMuteChanged -= OnMixerMuteChanged;
+
+            _currentPlaylist?.Dispose();
+            _currentPlaylist = null;
 
             StopAll();
             _pool.Dispose();

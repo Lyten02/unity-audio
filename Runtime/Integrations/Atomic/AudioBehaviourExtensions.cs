@@ -119,6 +119,35 @@ namespace Audio.Integrations.Atomic
             AudioSystemProvider.PlayMusic(audioKey, fadeDuration);
         }
 
+        // === Audio Groups ===
+
+        /// <summary>
+        /// Play random sound from group.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static AudioHandle PlayGroupSound(this IEntity entity, int groupKey)
+        {
+            return AudioSystemProvider.PlayGroup(groupKey);
+        }
+
+        /// <summary>
+        /// Play random sound from group with settings.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static AudioHandle PlayGroupSound(this IEntity entity, int groupKey, AudioPlaySettings settings)
+        {
+            return AudioSystemProvider.PlayGroup(groupKey, settings);
+        }
+
+        /// <summary>
+        /// Start music playlist.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static PlaylistHandle PlayPlaylist(this IEntity entity, int groupKey, float fadeDuration = 1f)
+        {
+            return AudioSystemProvider.PlayPlaylist(groupKey, fadeDuration);
+        }
+
         /// <summary>
         /// Stop all sounds in layer.
         /// </summary>

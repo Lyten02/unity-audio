@@ -138,6 +138,33 @@ namespace Audio.Editor
                 entries.Add((entry.Name, id));
             }
 
+            // Collect audio groups with GROUP_ prefix
+            foreach (var group in database.Groups)
+            {
+                if (group == null) continue;
+
+                int id = group.Id;
+                if (id == 0)
+                {
+                    id = GetStableHashCode("GROUP_" + group.Name);
+                }
+
+                while (usedIds.Contains(id))
+                {
+                    id++;
+                }
+                usedIds.Add(id);
+
+                // Update group ID if it was 0 or changed due to collision
+                if (group.Id != id)
+                {
+                    group.SetId(id);
+                    databaseModified = true;
+                }
+
+                entries.Add(("GROUP_" + group.Name, id));
+            }
+
             // Save database if modified
             if (databaseModified)
             {

@@ -56,6 +56,55 @@ namespace Audio
         /// </summary>
         void StopMusic(float fadeDuration = 1f);
 
+        // === Audio Groups ===
+
+        /// <summary>
+        /// Play random sound from group (one-shot, for SFX groups).
+        /// </summary>
+        AudioHandle PlayGroup(int groupKey);
+
+        /// <summary>
+        /// Play random sound from group with settings.
+        /// </summary>
+        AudioHandle PlayGroup(int groupKey, AudioPlaySettings settings);
+
+        // === Music Playlists ===
+
+        /// <summary>
+        /// Start music playlist with crossfade.
+        /// </summary>
+        PlaylistHandle PlayPlaylist(int groupKey, float fadeDuration = 1f);
+
+        /// <summary>
+        /// Start music playlist asynchronously.
+        /// </summary>
+        UniTask<PlaylistHandle> PlayPlaylistAsync(int groupKey, float fadeDuration = 1f, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Stop current playlist with fade out.
+        /// </summary>
+        void StopPlaylist(float fadeDuration = 1f);
+
+        /// <summary>
+        /// Pause current playlist.
+        /// </summary>
+        void PausePlaylist();
+
+        /// <summary>
+        /// Resume paused playlist.
+        /// </summary>
+        void ResumePlaylist();
+
+        /// <summary>
+        /// Skip to next track in playlist.
+        /// </summary>
+        void SkipTrack();
+
+        /// <summary>
+        /// Get current playlist handle.
+        /// </summary>
+        PlaylistHandle CurrentPlaylist { get; }
+
         // === Stop ===
 
         /// <summary>
@@ -144,5 +193,15 @@ namespace Audio
         /// Fired when a sound stops playing.
         /// </summary>
         event Action<AudioHandle> OnSoundStopped;
+
+        /// <summary>
+        /// Fired when playlist track changes.
+        /// </summary>
+        event Action<int> OnPlaylistTrackChanged;
+
+        /// <summary>
+        /// Fired when playlist ends (non-looping).
+        /// </summary>
+        event Action OnPlaylistEnded;
     }
 }

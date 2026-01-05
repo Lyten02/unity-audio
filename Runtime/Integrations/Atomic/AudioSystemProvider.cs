@@ -97,6 +97,81 @@ namespace Audio.Integrations.Atomic
             _service?.StopAll();
         }
 
+        // === Audio Groups ===
+
+        /// <summary>
+        /// Play random sound from group.
+        /// </summary>
+        public static AudioHandle PlayGroup(int groupKey)
+        {
+            if (_service == null)
+            {
+                Debug.LogWarning("[AudioSystemProvider] Not initialized");
+                return AudioHandle.Invalid;
+            }
+            return _service.PlayGroup(groupKey);
+        }
+
+        /// <summary>
+        /// Play random sound from group with settings.
+        /// </summary>
+        public static AudioHandle PlayGroup(int groupKey, AudioPlaySettings settings)
+        {
+            if (_service == null)
+            {
+                Debug.LogWarning("[AudioSystemProvider] Not initialized");
+                return AudioHandle.Invalid;
+            }
+            return _service.PlayGroup(groupKey, settings);
+        }
+
+        // === Playlists ===
+
+        /// <summary>
+        /// Start music playlist.
+        /// </summary>
+        public static PlaylistHandle PlayPlaylist(int groupKey, float fadeDuration = 1f)
+        {
+            return _service?.PlayPlaylist(groupKey, fadeDuration) ?? PlaylistHandle.Invalid;
+        }
+
+        /// <summary>
+        /// Stop current playlist.
+        /// </summary>
+        public static void StopPlaylist(float fadeDuration = 1f)
+        {
+            _service?.StopPlaylist(fadeDuration);
+        }
+
+        /// <summary>
+        /// Pause current playlist.
+        /// </summary>
+        public static void PausePlaylist()
+        {
+            _service?.PausePlaylist();
+        }
+
+        /// <summary>
+        /// Resume paused playlist.
+        /// </summary>
+        public static void ResumePlaylist()
+        {
+            _service?.ResumePlaylist();
+        }
+
+        /// <summary>
+        /// Skip to next track in playlist.
+        /// </summary>
+        public static void SkipTrack()
+        {
+            _service?.SkipTrack();
+        }
+
+        /// <summary>
+        /// Get current playlist handle.
+        /// </summary>
+        public static PlaylistHandle CurrentPlaylist => _service?.CurrentPlaylist ?? PlaylistHandle.Invalid;
+
         /// <summary>
         /// Mark audio service as ready (for WebGL after user interaction).
         /// </summary>
