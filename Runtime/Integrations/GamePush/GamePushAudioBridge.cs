@@ -23,6 +23,9 @@ namespace Audio.Integrations.GamePush
         private bool _savedSfxMuted;
         private bool _savedMusicMuted;
 
+        // Flag to prevent mute/unmute cycle between GamePush and mixer
+        private bool _syncingFromGamePush;
+
         public GamePushAudioBridge(ISoftwareMixer mixer)
         {
             _mixer = mixer;
@@ -76,6 +79,8 @@ namespace Audio.Integrations.GamePush
 
         private void SyncFromGamePush()
         {
+            _syncingFromGamePush = true;
+
             // Check if globally muted
             if (GP_Sounds.IsMuted(SoundType.All))
             {
@@ -86,10 +91,15 @@ namespace Audio.Integrations.GamePush
                 _mixer.SetMuted(AudioLayer.SFX, GP_Sounds.IsMuted(SoundType.SFX));
                 _mixer.SetMuted(AudioLayer.Music, GP_Sounds.IsMuted(SoundType.Music));
             }
+
+            _syncingFromGamePush = false;
         }
 
         private void OnMixerMuteChanged(AudioLayer layer, bool muted)
         {
+            // Don't sync back to GamePush if change came from GamePush (prevents cycle)
+            if (_syncingFromGamePush) return;
+
             // Sync mixer mute changes back to GamePush
             SoundType? soundType = layer switch
             {
@@ -112,35 +122,47 @@ namespace Audio.Integrations.GamePush
             }
         }
 
-        // GamePush event handlers
+        // GamePush event handlers (use _syncingFromGamePush to prevent cycle)
         private void OnGlobalMute()
         {
+            _syncingFromGamePush = true;
             _mixer.SetMuted(AudioLayer.Master, true);
+            _syncingFromGamePush = false;
         }
 
         private void OnGlobalUnmute()
         {
+            _syncingFromGamePush = true;
             _mixer.SetMuted(AudioLayer.Master, false);
+            _syncingFromGamePush = false;
         }
 
         private void OnSfxMute()
         {
+            _syncingFromGamePush = true;
             _mixer.SetMuted(AudioLayer.SFX, true);
+            _syncingFromGamePush = false;
         }
 
         private void OnSfxUnmute()
         {
+            _syncingFromGamePush = true;
             _mixer.SetMuted(AudioLayer.SFX, false);
+            _syncingFromGamePush = false;
         }
 
         private void OnMusicMute()
         {
+            _syncingFromGamePush = true;
             _mixer.SetMuted(AudioLayer.Music, true);
+            _syncingFromGamePush = false;
         }
 
         private void OnMusicUnmute()
         {
+            _syncingFromGamePush = true;
             _mixer.SetMuted(AudioLayer.Music, false);
+            _syncingFromGamePush = false;
         }
 
         // Pause/Resume handlers

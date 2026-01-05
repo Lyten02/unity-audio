@@ -63,6 +63,12 @@ namespace Audio.WebGL
             // Mark audio service as ready
             Integrations.Atomic.AudioSystemProvider.MarkReady();
 
+#if GAME_PUSH_ENABLED
+            // Unmute GamePush after user interaction (sandbox does this automatically, production does not)
+            GamePush.GP_Sounds.Unmute(GamePush.SoundType.All);
+            Debug.Log("[WebGLAudioActivator] Unmuted GamePush sounds");
+#endif
+
             Debug.Log("[WebGLAudioActivator] Audio activated");
 
             // Destroy the activator object
